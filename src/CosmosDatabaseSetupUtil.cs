@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using Soenneker.Cosmos.Client.Abstract;
 using Soenneker.Cosmos.Database.Setup.Abstract;
 using Soenneker.Utils.Random;
 
@@ -15,30 +16,34 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 {
     private readonly ILogger<CosmosDatabaseSetupUtil> _logger;
     private readonly IConfiguration _config;
+    private readonly ICosmosClientUtil _clientUtil;
 
-    public CosmosDatabaseSetupUtil(IConfiguration config, ILogger<CosmosDatabaseSetupUtil> logger)
+    public CosmosDatabaseSetupUtil(IConfiguration config, ILogger<CosmosDatabaseSetupUtil> logger, ICosmosClientUtil clientUtil)
     {
         _config = config;
         _logger = logger;
+        _clientUtil = clientUtil;
     }
 
-    public async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(CosmosClient client)
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase()
     {
         var databaseName = _config.GetValue<string>("Azure:Cosmos:DatabaseName");
 
         if (databaseName == null)
             throw new Exception("Azure:Cosmos:DatabaseName is required");
 
-        Microsoft.Azure.Cosmos.Database database = await EnsureDatabase(client, databaseName);
+        Microsoft.Azure.Cosmos.Database database = await EnsureDatabase(databaseName);
 
         return database;
     }
 
-    private async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(CosmosClient client, string name)
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(string name)
     {
         _logger.LogDebug("Ensuring Cosmos database {database} exists ... if not, creating", name);
 
         DatabaseResponse? databaseResponse = null;
+
+        CosmosClient client = await _clientUtil.GetClient();
 
         try
         {

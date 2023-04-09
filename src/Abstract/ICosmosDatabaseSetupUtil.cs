@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.Azure.Cosmos;
 
 namespace Soenneker.Cosmos.Database.Setup.Abstract;
 
@@ -12,5 +11,7 @@ public interface ICosmosDatabaseSetupUtil
     /// <summary>
     /// Ensure the database is created
     /// </summary>
-    ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(CosmosClient client);
+    ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase();
+
+    ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(string name);
 }
