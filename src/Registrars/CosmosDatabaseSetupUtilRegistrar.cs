@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Soenneker.Cosmos.Client.Registrars;
 using Soenneker.Cosmos.Database.Setup.Abstract;
 
 namespace Soenneker.Cosmos.Database.Setup.Registrars;
@@ -14,6 +15,7 @@ public static class CosmosDatabaseSetupUtilRegistrar
     /// </summary>
     public static void AddCosmosDatabaseSetupUtil(this IServiceCollection services)
     {
+        services.AddCosmosClientUtil();
         services.TryAddSingleton<ICosmosDatabaseSetupUtil, CosmosDatabaseSetupUtil>();
     }
 }
