@@ -22,14 +22,16 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         _logger = logger;
     }
 
-    public async ValueTask EnsureDatabase(CosmosClient client)
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(CosmosClient client)
     {
         var databaseName = _config.GetValue<string>("Azure:Cosmos:DatabaseName");
 
         if (databaseName == null)
             throw new Exception("Azure:Cosmos:DatabaseName is required");
 
-        await EnsureDatabase(client, databaseName);
+        Microsoft.Azure.Cosmos.Database database = await EnsureDatabase(client, databaseName);
+
+        return database;
     }
 
     private async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(CosmosClient client, string name)
