@@ -7,6 +7,7 @@ using Polly;
 using Polly.Retry;
 using Soenneker.Cosmos.Client.Abstract;
 using Soenneker.Cosmos.Database.Setup.Abstract;
+using Soenneker.Extensions.Configuration;
 using Soenneker.Utils.Random;
 
 namespace Soenneker.Cosmos.Database.Setup;
@@ -27,10 +28,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
     public async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase()
     {
-        var databaseName = _config.GetValue<string>("Azure:Cosmos:DatabaseName");
-
-        if (databaseName == null)
-            throw new Exception("Azure:Cosmos:DatabaseName is required");
+        var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
 
         Microsoft.Azure.Cosmos.Database database = await EnsureDatabase(databaseName);
 
@@ -89,19 +87,9 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
     private ThroughputProperties GetDatabaseThroughput()
     {
-        // TODO: Look at throughput and do further testing with AzOps
-
-        var environment = _config.GetValue<string>("Environment:Name");
-
-        if (environment == null)
-            throw new Exception("Environment:Name is required");
-
-        var throughput = _config.GetValue<int?>("Azure:Cosmos:DatabaseThroughput");
-
-        if (throughput == null)
-            throw new Exception("Azure:Cosmos:DatabaseThroughput is required");
-
-        var properties = ThroughputProperties.CreateAutoscaleThroughput(throughput.Value);
+        var throughput = _config.GetValueStrict<int>("Azure:Cosmos:DatabaseThroughput");
+        
+        var properties = ThroughputProperties.CreateAutoscaleThroughput(throughput);
 
         _logger.LogDebug("Retrieved the Cosmos DB AutoScale throughput of {throughput} RU", throughput);
 
