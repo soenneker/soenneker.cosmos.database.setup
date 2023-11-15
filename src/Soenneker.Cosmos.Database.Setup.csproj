@@ -39,7 +39,7 @@
 
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 
-        <PackageReference Include="Polly" Version="8.1.0" />
+        <PackageReference Include="Polly" Version="8.2.0" />
 
         <PackageReference Include="Soenneker.Cosmos.Client" Version="1.0.372" />
     </ItemGroup>
