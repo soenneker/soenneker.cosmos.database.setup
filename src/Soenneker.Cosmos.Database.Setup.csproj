@@ -37,10 +37,10 @@
         <None Include="..\LICENSE" Pack="true" PackagePath="\" />
         <None Include="..\icon.png" Pack="true" PackagePath="\" />
 
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 
         <PackageReference Include="Polly" Version="8.2.0" />
 
-        <PackageReference Include="Soenneker.Cosmos.Client" Version="2.0.378" />
+        <PackageReference Include="Soenneker.Cosmos.Client" Version="2.0.384" />
     </ItemGroup>
 </Project>
