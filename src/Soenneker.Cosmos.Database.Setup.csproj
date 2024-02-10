@@ -41,6 +41,6 @@
 
         <PackageReference Include="Polly" Version="8.3.0" />
 
-        <PackageReference Include="Soenneker.Cosmos.Client" Version="2.1.583" />
+        <PackageReference Include="Soenneker.Cosmos.Client" Version="2.1.584" />
     </ItemGroup>
 </Project>
