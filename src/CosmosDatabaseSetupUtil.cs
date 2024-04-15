@@ -8,6 +8,8 @@ using Polly.Retry;
 using Soenneker.Cosmos.Client.Abstract;
 using Soenneker.Cosmos.Database.Setup.Abstract;
 using Soenneker.Extensions.Configuration;
+using Soenneker.Extensions.Task;
+using Soenneker.Extensions.ValueTask;
 using Soenneker.Utils.Random;
 
 namespace Soenneker.Cosmos.Database.Setup;
@@ -30,7 +32,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
     {
         var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
 
-        Microsoft.Azure.Cosmos.Database database = await EnsureDatabase(databaseName);
+        Microsoft.Azure.Cosmos.Database database = await EnsureDatabase(databaseName).NoSync();
 
         return database;
     }
@@ -41,7 +43,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
         DatabaseResponse? databaseResponse = null;
 
-        CosmosClient client = await _clientUtil.GetClient();
+        CosmosClient client = await _clientUtil.GetClient().NoSync();
 
         try
         {
@@ -57,7 +59,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
             await retryPolicy.ExecuteAsync(async () =>
             {
-                databaseResponse = await client.CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput());
+                databaseResponse = await client.CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput()).NoSync();
                 _logger.LogDebug("Ensured database {database}", name);
             });
         }
@@ -80,7 +82,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
     private async ValueTask SetDatabaseThroughput(Microsoft.Azure.Cosmos.Database database)
     {
         _logger.LogInformation("Setting database throughput...");
-        await database.ReplaceThroughputAsync(GetDatabaseThroughput());
+        await database.ReplaceThroughputAsync(GetDatabaseThroughput()).NoSync();
 
         _logger.LogDebug("Finished setting database throughput");
     }
