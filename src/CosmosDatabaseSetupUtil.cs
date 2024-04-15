@@ -28,22 +28,22 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         _clientUtil = clientUtil;
     }
 
-    public async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase()
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure()
     {
         var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
 
-        Microsoft.Azure.Cosmos.Database database = await EnsureDatabase(databaseName).NoSync();
+        Microsoft.Azure.Cosmos.Database database = await Ensure(databaseName).NoSync();
 
         return database;
     }
 
-    public async ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(string name)
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name)
     {
         _logger.LogDebug("Ensuring Cosmos database {database} exists ... if not, creating", name);
 
         DatabaseResponse? databaseResponse = null;
 
-        CosmosClient client = await _clientUtil.GetClient().NoSync();
+        CosmosClient client = await _clientUtil.Get().NoSync();
 
         try
         {
@@ -53,7 +53,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
                                                       + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)),
                     async (exception, timespan, retryCount) =>
                     {
-                        _logger.LogError(exception, "*** CosmosSetupUtil *** Failed to EnsureDatabase, trying again in {delay}s ... count: {retryCount}", timespan.Seconds, retryCount);
+                        _logger.LogError(exception, "*** CosmosSetupUtil *** Failed to ensure database, trying again in {delay}s ... count: {retryCount}", timespan.Seconds, retryCount);
                         await ValueTask.CompletedTask;
                     });
 
@@ -61,7 +61,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
             {
                 databaseResponse = await client.CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput()).NoSync();
                 _logger.LogDebug("Ensured database {database}", name);
-            });
+            }).NoSync();
         }
         catch (Exception e)
         {
@@ -74,7 +74,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         if (database == null)
             throw new Exception($"Failed to create Cosmos database {name} diagnostics: {databaseResponse.Diagnostics}");
 
-        await SetDatabaseThroughput(database);
+        await SetDatabaseThroughput(database).NoSync();
 
         return databaseResponse.Database;
     }

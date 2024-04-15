@@ -11,7 +11,10 @@ public interface ICosmosDatabaseSetupUtil
     /// <summary>
     /// Ensure the database is created
     /// </summary>
-    ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase();
+    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure();
 
-    ValueTask<Microsoft.Azure.Cosmos.Database> EnsureDatabase(string name);
+    /// <summary>
+    /// Ensure the database is created
+    /// </summary>
+    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name);
 }
