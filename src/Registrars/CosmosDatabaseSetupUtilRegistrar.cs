@@ -10,12 +10,15 @@ namespace Soenneker.Cosmos.Database.Setup.Registrars;
 /// </summary>
 public static class CosmosDatabaseSetupUtilRegistrar
 {
-    /// <summary>
-    /// As Singleton
-    /// </summary>
-    public static void AddCosmosDatabaseSetupUtil(this IServiceCollection services)
+    public static void AddCosmosDatabaseSetupUtilAsScoped(this IServiceCollection services)
     {
-        services.AddCosmosClientUtil();
+        services.AddCosmosClientUtilAsSingleton();
+        services.TryAddScoped<ICosmosDatabaseSetupUtil, CosmosDatabaseSetupUtil>();
+    }
+
+    public static void AddCosmosDatabaseSetupUtilAsSingleton(this IServiceCollection services)
+    {
+        services.AddCosmosClientUtilAsSingleton();
         services.TryAddSingleton<ICosmosDatabaseSetupUtil, CosmosDatabaseSetupUtil>();
     }
 }
