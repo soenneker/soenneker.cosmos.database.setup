@@ -40,7 +40,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
     public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Ensuring Cosmos database {database} exists ... if not, creating", name);
+        _logger.LogDebug("Ensuring Cosmos database ({name}) exists ... if not, creating", name);
 
         DatabaseResponse? databaseResponse = null;
 
@@ -73,7 +73,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         Microsoft.Azure.Cosmos.Database database = databaseResponse!.Database;
 
         if (database == null)
-            throw new Exception($"Failed to create Cosmos database {name} diagnostics: {databaseResponse.Diagnostics}");
+            throw new Exception($"Failed to create Cosmos database ({name}) diagnostics: {databaseResponse.Diagnostics}");
 
         await SetDatabaseThroughput(database).NoSync();
 
@@ -94,7 +94,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         
         var properties = ThroughputProperties.CreateAutoscaleThroughput(throughput);
 
-        _logger.LogDebug("Retrieved the Cosmos DB AutoScale throughput of {throughput} RU", throughput);
+        _logger.LogDebug("Retrieved the Cosmos DB AutoScale throughput ({throughput} RU)", throughput);
 
         return properties;
     }
