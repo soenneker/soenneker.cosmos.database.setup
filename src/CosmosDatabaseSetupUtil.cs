@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
@@ -28,22 +29,22 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         _clientUtil = clientUtil;
     }
 
-    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure()
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(CancellationToken cancellationToken = default)
     {
         var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
 
-        Microsoft.Azure.Cosmos.Database database = await Ensure(databaseName).NoSync();
+        Microsoft.Azure.Cosmos.Database database = await Ensure(databaseName, cancellationToken).NoSync();
 
         return database;
     }
 
-    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name)
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Ensuring Cosmos database {database} exists ... if not, creating", name);
 
         DatabaseResponse? databaseResponse = null;
 
-        CosmosClient client = await _clientUtil.Get().NoSync();
+        CosmosClient client = await _clientUtil.Get(cancellationToken).NoSync();
 
         try
         {
@@ -53,19 +54,19 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
                                                       + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)),
                     async (exception, timespan, retryCount) =>
                     {
-                        _logger.LogError(exception, "*** CosmosSetupUtil *** Failed to ensure database, trying again in {delay}s ... count: {retryCount}", timespan.Seconds, retryCount);
+                        _logger.LogError(exception, "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({name}), trying again in {delay}s ... count: {retryCount}", name, timespan.Seconds, retryCount);
                         await ValueTask.CompletedTask;
                     });
 
             await retryPolicy.ExecuteAsync(async () =>
             {
-                databaseResponse = await client.CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput()).NoSync();
-                _logger.LogDebug("Ensured database {database}", name);
+                databaseResponse = await client.CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput(), cancellationToken: cancellationToken).NoSync();
+                _logger.LogDebug("Ensured Cosmos database ({name})", name);
             }).NoSync();
         }
         catch (Exception e)
         {
-            _logger.LogCritical(e, "*** CosmosSetupUtil *** Stopped retrying database creation: {database}, aborting!", name);
+            _logger.LogCritical(e, "*** CosmosDatabaseSetupUtil *** Stopped retrying database creation: {database}, aborting!", name);
             throw;
         }
 

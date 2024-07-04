@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Soenneker.Cosmos.Database.Setup.Abstract;
 
@@ -11,10 +12,10 @@ public interface ICosmosDatabaseSetupUtil
     /// <summary>
     /// Ensure the database is created
     /// </summary>
-    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure();
+    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Ensure the database is created
     /// </summary>
-    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name);
+    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name, CancellationToken cancellationToken = default);
 }
