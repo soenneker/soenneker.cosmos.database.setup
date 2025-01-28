@@ -2,7 +2,6 @@ using Soenneker.Cosmos.Database.Setup.Abstract;
 using Soenneker.Tests.FixturedUnit;
 using Xunit;
 
-
 namespace Soenneker.Cosmos.Database.Setup.Tests;
 
 [Collection("Collection")]

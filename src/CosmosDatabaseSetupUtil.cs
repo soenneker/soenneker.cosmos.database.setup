@@ -9,6 +9,7 @@ using Polly.Retry;
 using Soenneker.Cosmos.Client.Abstract;
 using Soenneker.Cosmos.Database.Setup.Abstract;
 using Soenneker.Extensions.Configuration;
+using Soenneker.Extensions.String;
 using Soenneker.Extensions.Task;
 using Soenneker.Extensions.ValueTask;
 using Soenneker.Utils.Random;
@@ -33,9 +34,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
     {
         var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
 
-        Microsoft.Azure.Cosmos.Database database = await Ensure(databaseName, cancellationToken).NoSync();
-
-        return database;
+        return await Ensure(databaseName, cancellationToken).NoSync();
     }
 
     public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name, CancellationToken cancellationToken = default)
@@ -54,7 +53,8 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
                                                       + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)),
                     async (exception, timespan, retryCount) =>
                     {
-                        _logger.LogError(exception, "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({name}), trying again in {delay}s ... count: {retryCount}", name, timespan.Seconds, retryCount);
+                        _logger.LogError(exception, "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({name}), trying again in {delay}s ... count: {retryCount}", name, timespan.Seconds,
+                            retryCount);
                         await ValueTask.CompletedTask;
                     });
 
@@ -91,10 +91,16 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
     private ThroughputProperties GetDatabaseThroughput()
     {
         var throughput = _config.GetValueStrict<int>("Azure:Cosmos:DatabaseThroughput");
-        
-        var properties = ThroughputProperties.CreateAutoscaleThroughput(throughput);
+        var throughputType = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseThroughputType");
 
-        _logger.LogDebug("Retrieved the Cosmos DB AutoScale throughput ({throughput} RU)", throughput);
+        ThroughputProperties properties;
+
+        if (throughputType.EqualsIgnoreCase("autoscale"))
+            properties = ThroughputProperties.CreateAutoscaleThroughput(throughput);
+        else
+            properties = ThroughputProperties.CreateManualThroughput(throughput);
+
+        _logger.LogDebug("Retrieved the Cosmos DB AutoScale throughput ({throughput} RU) with type ({throughputType})", throughput, throughputType);
 
         return properties;
     }
