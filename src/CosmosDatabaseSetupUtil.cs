@@ -82,10 +82,15 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
     private async ValueTask SetDatabaseThroughput(Microsoft.Azure.Cosmos.Database database)
     {
-        _logger.LogInformation("Setting database throughput...");
-        await database.ReplaceThroughputAsync(GetDatabaseThroughput()).NoSync();
+        var replaceDatabaseThroughput = _config.GetValue<bool>("Azure:Cosmos:ReplaceDatabaseThroughput");
 
-        _logger.LogDebug("Finished setting database throughput");
+        if (replaceDatabaseThroughput)
+        {
+            _logger.LogInformation("Setting database throughput...");
+            await database.ReplaceThroughputAsync(GetDatabaseThroughput()).NoSync();
+
+            _logger.LogDebug("Finished setting database throughput");
+        }
     }
 
     private ThroughputProperties GetDatabaseThroughput()
@@ -100,7 +105,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         else
             properties = ThroughputProperties.CreateManualThroughput(throughput);
 
-        _logger.LogDebug("Retrieved the Cosmos DB AutoScale throughput ({throughput} RU) with type ({throughputType})", throughput, throughputType);
+        _logger.LogDebug("Retrieved the Cosmos DB throughput ({throughput} RU - {throughputType}) with type ", throughput, throughputType);
 
         return properties;
     }
