@@ -75,19 +75,19 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         if (database == null)
             throw new Exception($"Failed to create Cosmos database ({name}) diagnostics: {databaseResponse.Diagnostics}");
 
-        await SetDatabaseThroughput(database).NoSync();
+        await SetDatabaseThroughput(database, cancellationToken).NoSync();
 
         return databaseResponse.Database;
     }
 
-    private async ValueTask SetDatabaseThroughput(Microsoft.Azure.Cosmos.Database database)
+    private async ValueTask SetDatabaseThroughput(Microsoft.Azure.Cosmos.Database database, CancellationToken cancellationToken)
     {
         var replaceDatabaseThroughput = _config.GetValue<bool>("Azure:Cosmos:ReplaceDatabaseThroughput");
 
         if (replaceDatabaseThroughput)
         {
             _logger.LogInformation("Setting database throughput...");
-            await database.ReplaceThroughputAsync(GetDatabaseThroughput()).NoSync();
+            await database.ReplaceThroughputAsync(GetDatabaseThroughput(), cancellationToken: cancellationToken).NoSync();
 
             _logger.LogDebug("Finished setting database throughput");
         }
