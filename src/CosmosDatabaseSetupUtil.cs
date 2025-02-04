@@ -105,7 +105,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         else
             properties = ThroughputProperties.CreateManualThroughput(throughput);
 
-        _logger.LogDebug("Retrieved the Cosmos DB throughput ({throughput} RU - {throughputType}) with type ", throughput, throughputType);
+        _logger.LogDebug("Using Cosmos DB throughput ({throughput} RU - {throughputType})...", throughput, throughputType);
 
         return properties;
     }
