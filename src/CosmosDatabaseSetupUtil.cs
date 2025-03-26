@@ -30,11 +30,11 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         _clientUtil = clientUtil;
     }
 
-    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(CancellationToken cancellationToken = default)
+    public ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(CancellationToken cancellationToken = default)
     {
         var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
 
-        return await Ensure(databaseName, cancellationToken).NoSync();
+        return Ensure(databaseName, cancellationToken);
     }
 
     public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name, CancellationToken cancellationToken = default)
@@ -87,6 +87,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         if (replaceDatabaseThroughput)
         {
             _logger.LogInformation("Setting database throughput...");
+
             await database.ReplaceThroughputAsync(GetDatabaseThroughput(), cancellationToken: cancellationToken).NoSync();
 
             _logger.LogDebug("Finished setting database throughput");
