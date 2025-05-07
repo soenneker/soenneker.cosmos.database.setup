@@ -47,22 +47,26 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
         try
         {
-            AsyncRetryPolicy? retryPolicy = Policy
-                .Handle<Exception>()
-                .WaitAndRetryAsync(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)) // exponential back-off: 2, 4, 8 etc, with jitter
-                                                      + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)),
-                    async (exception, timespan, retryCount) =>
-                    {
-                        _logger.LogError(exception, "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({name}), trying again in {delay}s ... count: {retryCount}", name, timespan.Seconds,
-                            retryCount);
-                        await ValueTask.CompletedTask;
-                    });
+            AsyncRetryPolicy? retryPolicy = Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+                                                  .WaitAndRetryAsync(5, retryAttempt =>
+                                                      TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)) // exponential back-off: 2, 4, 8 etc, with jitter
+                                                      + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)), async (exception, timespan, retryCount) =>
+                                                  {
+                                                      _logger.LogError(exception,
+                                                          "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({name}), trying again in {delay}s ... count: {retryCount}",
+                                                          name,
+                                                          timespan.Seconds, retryCount);
+                                                      await ValueTask.CompletedTask;
+                                                  });
 
             await retryPolicy.ExecuteAsync(async () =>
-            {
-                databaseResponse = await client.CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput(), cancellationToken: cancellationToken).NoSync();
-                _logger.LogDebug("Ensured Cosmos database ({name})", name);
-            }).NoSync();
+                             {
+                                 databaseResponse = await client
+                                                          .CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput(), cancellationToken: cancellationToken)
+                                                          .NoSync();
+                                 _logger.LogDebug("Ensured Cosmos database ({name})", name);
+                             })
+                             .NoSync();
         }
         catch (Exception e)
         {
