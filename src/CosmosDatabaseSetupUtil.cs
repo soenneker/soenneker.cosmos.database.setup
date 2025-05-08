@@ -62,7 +62,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
             await retryPolicy.ExecuteAsync(async () =>
                              {
                                  databaseResponse = await client
-                                                          .CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput(), cancellationToken: cancellationToken)
+                                                          .CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput(), cancellationToken: CancellationToken.None)
                                                           .NoSync();
                                  _logger.LogDebug("Ensured Cosmos database ({name})", name);
                              })
@@ -79,7 +79,7 @@ public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         if (database == null)
             throw new Exception($"Failed to create Cosmos database ({name}) diagnostics: {databaseResponse.Diagnostics}");
 
-        await SetDatabaseThroughput(database, cancellationToken).NoSync();
+        await SetDatabaseThroughput(database, CancellationToken.None).NoSync();
 
         return databaseResponse.Database;
     }
