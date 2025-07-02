@@ -17,7 +17,7 @@ using Soenneker.Utils.Random;
 namespace Soenneker.Cosmos.Database.Setup;
 
 ///<inheritdoc cref="ICosmosDatabaseSetupUtil"/>
-public class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
+public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 {
     private readonly ILogger<CosmosDatabaseSetupUtil> _logger;
     private readonly IConfiguration _config;
