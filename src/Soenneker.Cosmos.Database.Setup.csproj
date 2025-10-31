@@ -36,7 +36,10 @@
         <None Include="..\README.md" Pack="true" PackagePath="\" />
         <None Include="..\LICENSE" Pack="true" PackagePath="\" />
         <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Polly" Version="8.6.4" />
-        <PackageReference Include="Soenneker.Cosmos.Client" Version="4.0.3138" />
+        <PackageReference Include="Soenneker.Cosmos.Client" Version="4.0.3140" />
     </ItemGroup>
 </Project>

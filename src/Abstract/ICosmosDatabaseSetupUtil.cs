@@ -17,5 +17,5 @@ public interface ICosmosDatabaseSetupUtil
     /// <summary>
     /// Ensure the database is created
     /// </summary>
-    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name, CancellationToken cancellationToken = default);
+    ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string endpoint, string accountKey, string databaseName, CancellationToken cancellationToken = default);
 }

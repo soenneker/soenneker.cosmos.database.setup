@@ -33,17 +33,19 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
     public ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(CancellationToken cancellationToken = default)
     {
         var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
+        var endpoint = _config.GetValueStrict<string>("Azure:Cosmos:Endpoint");
+        var accountKey = _config.GetValueStrict<string>("Azure:Cosmos:AccountKey");
 
-        return Ensure(databaseName, cancellationToken);
+        return Ensure(endpoint, accountKey, databaseName, cancellationToken);
     }
 
-    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string name, CancellationToken cancellationToken = default)
+    public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string endpoint, string accountKey, string databaseName, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Ensuring Cosmos database ({name}) exists ... if not, creating", name);
+        _logger.LogDebug("Ensuring Cosmos database ({databaseName}) exists ... if not, creating", databaseName);
 
         DatabaseResponse? databaseResponse = null;
 
-        CosmosClient client = await _clientUtil.Get(cancellationToken).NoSync();
+        CosmosClient client = await _clientUtil.Get(endpoint, accountKey, cancellationToken).NoSync();
 
         try
         {
@@ -53,8 +55,8 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
                                                       + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)), async (exception, timespan, retryCount) =>
                                                   {
                                                       _logger.LogError(exception,
-                                                          "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({name}), trying again in {delay}s ... count: {retryCount}",
-                                                          name,
+                                                          "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({databaseName}), trying again in {delay}s ... count: {retryCount}",
+                                                          databaseName,
                                                           timespan.Seconds, retryCount);
                                                       await ValueTask.CompletedTask;
                                                   });
@@ -62,22 +64,22 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
             await retryPolicy.ExecuteAsync(async () =>
                              {
                                  databaseResponse = await client
-                                                          .CreateDatabaseIfNotExistsAsync(name, GetDatabaseThroughput(), cancellationToken: CancellationToken.None)
+                                                          .CreateDatabaseIfNotExistsAsync(databaseName, GetDatabaseThroughput(), cancellationToken: CancellationToken.None)
                                                           .NoSync();
-                                 _logger.LogDebug("Ensured Cosmos database ({name})", name);
+                                 _logger.LogDebug("Ensured Cosmos database ({databaseName})", databaseName);
                              })
                              .NoSync();
         }
         catch (Exception e)
         {
-            _logger.LogCritical(e, "*** CosmosDatabaseSetupUtil *** Stopped retrying database creation: {database}, aborting!", name);
+            _logger.LogCritical(e, "*** CosmosDatabaseSetupUtil *** Stopped retrying database creation: {database}, aborting!", databaseName);
             throw;
         }
 
         Microsoft.Azure.Cosmos.Database database = databaseResponse!.Database;
 
         if (database == null)
-            throw new Exception($"Failed to create Cosmos database ({name}) diagnostics: {databaseResponse.Diagnostics}");
+            throw new Exception($"Failed to create Cosmos database ({databaseName}) diagnostics: {databaseResponse.Diagnostics}");
 
         await SetDatabaseThroughput(database, CancellationToken.None).NoSync();
 
