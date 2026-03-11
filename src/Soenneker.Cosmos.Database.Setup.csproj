@@ -40,6 +40,6 @@
 
     <ItemGroup>
         <PackageReference Include="Polly" Version="8.6.6" />
-        <PackageReference Include="Soenneker.Cosmos.Client" Version="4.0.3400" />
+        <PackageReference Include="Soenneker.Cosmos.Client" Version="4.0.3407" />
     </ItemGroup>
 </Project>
