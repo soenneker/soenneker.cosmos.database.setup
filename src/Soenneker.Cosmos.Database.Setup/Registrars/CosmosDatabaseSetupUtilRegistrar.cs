@@ -11,10 +11,10 @@ namespace Soenneker.Cosmos.Database.Setup.Registrars;
 public static class CosmosDatabaseSetupUtilRegistrar
 {
     /// <summary>
-    /// Adds cosmos database setup util as singleton.
+    /// Registers Cosmos Database Setup Util with a singleton lifetime.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddCosmosDatabaseSetupUtilAsSingleton(this IServiceCollection services)
     {
         services.AddCosmosClientUtilAsSingleton().TryAddSingleton<ICosmosDatabaseSetupUtil, CosmosDatabaseSetupUtil>();
@@ -23,10 +23,10 @@ public static class CosmosDatabaseSetupUtilRegistrar
     }
 
     /// <summary>
-    /// Adds cosmos database setup util as scoped.
+    /// Registers Cosmos Database Setup Util with a scoped lifetime.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddCosmosDatabaseSetupUtilAsScoped(this IServiceCollection services)
     {
         services.AddCosmosClientUtilAsSingleton().TryAddScoped<ICosmosDatabaseSetupUtil, CosmosDatabaseSetupUtil>();
