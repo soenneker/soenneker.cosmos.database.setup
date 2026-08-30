@@ -5,41 +5,57 @@
 
 # Soenneker.Cosmos.Database.Setup
 
-A utility library for Azure Cosmos database setup operations Singleton IoC.
+Creates an Azure Cosmos DB database when it does not exist and optionally updates its shared throughput.
 
-## Install
+## Installation
 
 ```bash
 dotnet add package Soenneker.Cosmos.Database.Setup
 ```
 
-## Quick start
+## Configuration
 
-```csharp
-using Soenneker.Cosmos.Database.Setup.Registrars;
-using Microsoft.Extensions.DependencyInjection;
-
-var services = new ServiceCollection();
-var result = services.AddCosmosDatabaseSetupUtilAsSingleton();
+```json
+{
+  "Azure": {
+    "Cosmos": {
+      "Endpoint": "https://your-account.documents.azure.com:443/",
+      "AccountKey": "your-account-key",
+      "DatabaseName": "app",
+      "DatabaseThroughput": 1000,
+      "DatabaseThroughputType": "autoscale",
+      "ReplaceDatabaseThroughput": false
+    }
+  }
+}
 ```
 
-Registers Cosmos Database Setup Util with a singleton lifetime.
+`DatabaseThroughputType` is case-insensitive. The value `autoscale` creates autoscale throughput; every other value selects manual throughput. `DatabaseThroughput` and `DatabaseThroughputType` are required for both `Ensure` overloads because throughput is read from configuration.
 
-## What you get
+When `ReplaceDatabaseThroughput` is `false` or omitted, throughput is supplied only if the database must be created. When it is `true`, the configured throughput is also applied to an existing database after it is resolved.
 
-- `ICosmosDatabaseSetupUtil` — A utility library for Azure Cosmos database setup operations Singleton IoC.
-- `CosmosDatabaseSetupUtilRegistrar` — A utility library for Azure Cosmos database setup operations.
+## Registration and use
 
-## API at a glance
+```csharp
+using Soenneker.Cosmos.Database.Setup.Abstract;
+using Soenneker.Cosmos.Database.Setup.Registrars;
 
-| API | What it does | Result / important behavior |
-| --- | --- | --- |
-| `ICosmosDatabaseSetupUtil.Ensure(cancellationToken)` | Ensure the database is created. | A task whose result is the requested microsoft.Azure.Cosmos.Database. |
-| `ICosmosDatabaseSetupUtil.Ensure(endpoint, accountKey, databaseName, cancellationToken)` | Ensure the database is created. | A task whose result is the requested microsoft.Azure.Cosmos.Database. |
-| `CosmosDatabaseSetupUtilRegistrar.AddCosmosDatabaseSetupUtilAsSingleton(services)` | Registers Cosmos Database Setup Util with a singleton lifetime. | The same service collection, so additional registrations can be chained. |
-| `CosmosDatabaseSetupUtilRegistrar.AddCosmosDatabaseSetupUtilAsScoped(services)` | Registers Cosmos Database Setup Util with a scoped lifetime. | The same service collection, so additional registrations can be chained. |
+services.AddCosmosDatabaseSetupUtilAsSingleton();
 
-## Practical notes
+ICosmosDatabaseSetupUtil setup = serviceProvider.GetRequiredService<ICosmosDatabaseSetupUtil>();
+Microsoft.Azure.Cosmos.Database database = await setup.Ensure(cancellationToken);
+```
 
-- Cancellation stops pending work; it does not undo work that has already completed.
-- Calls that return a cached or singleton value reuse the same instance until the owning service is disposed.
+`Ensure()` reads the endpoint, account key, and database name from `Azure:Cosmos`. To provide those values per call:
+
+```csharp
+Microsoft.Azure.Cosmos.Database database = await setup.Ensure(
+    endpoint,
+    accountKey,
+    "app",
+    cancellationToken);
+```
+
+`AddCosmosDatabaseSetupUtilAsScoped()` is also available. Both registrations add the Cosmos client utility as a singleton.
+
+Transient request timeouts, throttling, HTTP failures, and selected Cosmos service errors are retried five times with exponential backoff and jitter. Authentication, authorization, invalid configuration, exhausted retries, throughput replacement failures, and cancellation propagate to the caller.

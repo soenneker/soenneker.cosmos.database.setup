@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
@@ -16,7 +18,6 @@ using Soenneker.Utils.Random;
 
 namespace Soenneker.Cosmos.Database.Setup;
 
-/// <inheritdoc cref="ICosmosDatabaseSetupUtil"/>
 public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 {
     private readonly ILogger<CosmosDatabaseSetupUtil> _logger;
@@ -30,13 +31,17 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         _logger = logger;
         _clientUtil = clientUtil;
 
-        _retryPolicy = Policy.Handle<Exception>(static ex => ex is not OperationCanceledException)
+        _retryPolicy = Policy.Handle<CosmosException>(static exception =>
+                                 exception.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
+                                     HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable || (int)exception.StatusCode == 449)
+                             .Or<HttpRequestException>()
+                             .Or<TimeoutException>()
                              .WaitAndRetryAsync(5,
                                  static retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
                                      + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)),
                                  (exception, timespan, retryCount, context) =>
                                  {
-                                     _logger.LogError(exception,
+                                     _logger.LogWarning(exception,
                                          "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({databaseName}), trying again in {delay}s ... count: {retryCount}",
                                          context["databaseName"], timespan.TotalSeconds, retryCount);
                                      return Task.CompletedTask;
@@ -61,33 +66,22 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         CosmosClient client = await _clientUtil.Get(endpoint, accountKey, cancellationToken).NoSync();
         ThroughputProperties databaseThroughput = GetDatabaseThroughput();
 
-        try
-        {
-            var context = new Context {["databaseName"] = databaseName};
-            await _retryPolicy.ExecuteAsync(async _ =>
-                             {
-                                 databaseResponse = await client
-                                                          .CreateDatabaseIfNotExistsAsync(databaseName, databaseThroughput,
-                                                              cancellationToken: CancellationToken.None)
-                                                          .NoSync();
-                                 _logger.LogDebug("Ensured Cosmos database ({databaseName})", databaseName);
-                             }, context)
-                             .NoSync();
+        var context = new Context {["databaseName"] = databaseName};
+        await _retryPolicy.ExecuteAsync(async (_, token) =>
+                         {
+                             databaseResponse = await client.CreateDatabaseIfNotExistsAsync(databaseName, databaseThroughput, cancellationToken: token)
+                                                            .NoSync();
+                             _logger.LogDebug("Ensured Cosmos database ({databaseName})", databaseName);
+                         }, context, cancellationToken)
+                         .NoSync();
 
-            Microsoft.Azure.Cosmos.Database database = databaseResponse!.Database;
+        DatabaseResponse ensuredResponse = databaseResponse ??
+                                            throw new InvalidOperationException($"Cosmos did not return a response while ensuring database '{databaseName}'.");
+        Microsoft.Azure.Cosmos.Database database = ensuredResponse.Database;
 
-            if (database == null)
-                throw new Exception($"Failed to create Cosmos database ({databaseName}) diagnostics: {databaseResponse.Diagnostics}");
+        await SetDatabaseThroughput(database, databaseThroughput, cancellationToken).NoSync();
 
-            await SetDatabaseThroughput(database, databaseThroughput, CancellationToken.None).NoSync();
-        }
-        catch (Exception e)
-        {
-            _logger.LogCritical(e, "*** CosmosDatabaseSetupUtil *** Stopped retrying database creation: {database}, aborting!", databaseName);
-            throw;
-        }
-
-        return databaseResponse.Database;
+        return database;
     }
 
     private async ValueTask SetDatabaseThroughput(Microsoft.Azure.Cosmos.Database database, ThroughputProperties databaseThroughput,
