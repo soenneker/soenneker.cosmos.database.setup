@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Polly;
-using Polly.Retry;
+using Kevlar;
 using Soenneker.Cosmos.Client.Abstract;
 using Soenneker.Cosmos.Database.Setup.Abstract;
 using Soenneker.Extensions.Configuration;
@@ -23,7 +22,7 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
     private readonly ILogger<CosmosDatabaseSetupUtil> _logger;
     private readonly IConfiguration _config;
     private readonly ICosmosClientUtil _clientUtil;
-    private readonly AsyncRetryPolicy _retryPolicy;
+    private readonly Shield _retryShield;
 
     public CosmosDatabaseSetupUtil(IConfiguration config, ILogger<CosmosDatabaseSetupUtil> logger, ICosmosClientUtil clientUtil)
     {
@@ -31,21 +30,25 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         _logger = logger;
         _clientUtil = clientUtil;
 
-        _retryPolicy = Policy.Handle<CosmosException>(static exception =>
-                                 exception.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
-                                     HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable || (int)exception.StatusCode == 449)
-                             .Or<HttpRequestException>()
-                             .Or<TimeoutException>()
-                             .WaitAndRetryAsync(5,
-                                 static retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
-                                     + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)),
-                                 (exception, timespan, retryCount, context) =>
-                                 {
-                                     _logger.LogWarning(exception,
-                                         "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({databaseName}), trying again in {delay}s ... count: {retryCount}",
-                                         context["databaseName"], timespan.TotalSeconds, retryCount);
-                                     return Task.CompletedTask;
-                                 });
+        _retryShield = Shield.When<CosmosException>(static exception =>
+                                  exception.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
+                                      HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable || (int) exception.StatusCode == 449)
+                              .Or<HttpRequestException>()
+                              .Or<TimeoutException>()
+                              .Retry(options =>
+                              {
+                                  options.MaxRetries = 5;
+                                  options.Backoff = Backoff.Custom(static attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt))
+                                      + TimeSpan.FromMilliseconds(RandomUtil.Next(0, 1000)));
+                                  options.OnRetry = retry =>
+                                  {
+                                      _logger.LogWarning(retry.Exception,
+                                          "*** CosmosDatabaseSetupUtil *** Failed to ensure database ({databaseName}), trying again in {delay}s ... count: {retryCount}",
+                                          retry.Context.Properties.GetOrDefault(KevlarKeys.OperationKey, string.Empty), retry.Delay.TotalSeconds,
+                                          retry.AttemptNumber + 1);
+                                      return default;
+                                  };
+                              });
     }
 
     public ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(CancellationToken cancellationToken = default)
@@ -66,13 +69,15 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
         CosmosClient client = await _clientUtil.Get(endpoint, accountKey, cancellationToken).NoSync();
         ThroughputProperties databaseThroughput = GetDatabaseThroughput();
 
-        var context = new Context {["databaseName"] = databaseName};
-        await _retryPolicy.ExecuteAsync(async (_, token) =>
+        await _retryShield.ExecuteWithContextAsync(databaseName,
+                         static (name, properties) => properties.Set(KevlarKeys.OperationKey, name),
+                         async (_, context) =>
                          {
-                             databaseResponse = await client.CreateDatabaseIfNotExistsAsync(databaseName, databaseThroughput, cancellationToken: token)
+                             databaseResponse = await client.CreateDatabaseIfNotExistsAsync(databaseName, databaseThroughput,
+                                                         cancellationToken: context.CancellationToken)
                                                             .NoSync();
                              _logger.LogDebug("Ensured Cosmos database ({databaseName})", databaseName);
-                         }, context, cancellationToken)
+                         }, cancellationToken)
                          .NoSync();
 
         DatabaseResponse ensuredResponse = databaseResponse ??
