@@ -45,6 +45,6 @@
 
     <ItemGroup>
         <PackageReference Include="Kevlar" Version="1.1.1" />
-        <PackageReference Include="Soenneker.Cosmos.Client" Version="4.0.3762" />
+        <PackageReference Include="Soenneker.Cosmos.Client" Version="4.0.3763" />
     </ItemGroup>
 </Project>
