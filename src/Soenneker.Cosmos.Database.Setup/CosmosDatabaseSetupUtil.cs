@@ -54,9 +54,9 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
     public ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(CancellationToken cancellationToken = default)
     {
-        var databaseName = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseName");
-        var endpoint = _config.GetValueStrict<string>("Azure:Cosmos:Endpoint");
-        var accountKey = _config.GetValueStrict<string>("Azure:Cosmos:AccountKey");
+        var databaseName = _config.GetStringStrict("Azure:Cosmos:DatabaseName");
+        var endpoint = _config.GetStringStrict("Azure:Cosmos:Endpoint");
+        var accountKey = _config.GetStringStrict("Azure:Cosmos:AccountKey");
 
         return Ensure(endpoint, accountKey, databaseName, cancellationToken);
     }
@@ -107,8 +107,8 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
     private ThroughputProperties GetDatabaseThroughput()
     {
-        var throughput = _config.GetValueStrict<int>("Azure:Cosmos:DatabaseThroughput");
-        var throughputType = _config.GetValueStrict<string>("Azure:Cosmos:DatabaseThroughputType");
+        var throughput = (int)new System.ComponentModel.Int32Converter().ConvertFromInvariantString(_config.GetStringStrict("Azure:Cosmos:DatabaseThroughput"))!;
+        var throughputType = _config.GetStringStrict("Azure:Cosmos:DatabaseThroughputType");
 
         ThroughputProperties properties = throughputType.EqualsIgnoreCase("autoscale")
             ? ThroughputProperties.CreateAutoscaleThroughput(throughput)
