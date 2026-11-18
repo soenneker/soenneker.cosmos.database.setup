@@ -63,7 +63,8 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
 
     public async ValueTask<Microsoft.Azure.Cosmos.Database> Ensure(string endpoint, string accountKey, string databaseName, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Ensuring Cosmos database ({databaseName}) exists ... if not, creating", databaseName);
+        if (_logger.IsEnabled(LogLevel.Debug))
+            _logger.LogDebug("Ensuring Cosmos database ({databaseName}) exists ... if not, creating", databaseName);
 
         DatabaseResponse? databaseResponse = null;
 
@@ -77,7 +78,8 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
                              databaseResponse = await client.CreateDatabaseIfNotExistsAsync(databaseName, databaseThroughput,
                                                          cancellationToken: context.CancellationToken)
                                                             .NoSync();
-                             _logger.LogDebug("Ensured Cosmos database ({databaseName})", databaseName);
+                             if (_logger.IsEnabled(LogLevel.Debug))
+                                 _logger.LogDebug("Ensured Cosmos database ({databaseName})", databaseName);
                          }, cancellationToken)
                          .NoSync();
 
@@ -114,7 +116,8 @@ public sealed class CosmosDatabaseSetupUtil : ICosmosDatabaseSetupUtil
             ? ThroughputProperties.CreateAutoscaleThroughput(throughput)
             : ThroughputProperties.CreateManualThroughput(throughput);
 
-        _logger.LogDebug("Using Cosmos DB throughput ({throughput} RU - {throughputType})...", throughput, throughputType);
+        if (_logger.IsEnabled(LogLevel.Debug))
+            _logger.LogDebug("Using Cosmos DB throughput ({throughput} RU - {throughputType})...", throughput, throughputType);
         return properties;
     }
 
